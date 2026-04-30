@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liver Disease Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <!-- Background grid -->
+  <div class="bg-grid"></div>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1 class="hero-title">Patient Data<br /><em>Analysis</em></h1>
+      <p class="hero-desc">
+        Enter the patient's biochemical parameters to predict the risk of liver disease.
+      </p>
+    </section>
+
+    <!-- Form Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Patient Information</span>
+      </div>
+
+      <form method="POST" action="/" class="pred-form" id="predForm">
+
+        <!-- Age -->
+        <div class="form-grid form-grid-1">
+          <div class="field">
+            <label for="Age">Age <span class="unit">years</span></label>
+            <input type="number" id="Age" name="Age" placeholder="e.g. 45" min="1" max="120" step="1" required />
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <span class="section-label">Bilirubin Values</span>
+        </div>
+
+        <div class="form-grid form-grid-2">
+          <div class="field">
+            <label for="Total_Bilirubin">Total Bilirubin <span class="unit">mg/dL</span></label>
+            <input type="number" id="Total_Bilirubin" name="Total_Bilirubin" placeholder="e.g. 0.7" step="0.01" min="0" required />
+          </div>
+          <div class="field">
+            <label for="Direct_Bilirubin">Direct Bilirubin <span class="unit">mg/dL</span></label>
+            <input type="number" id="Direct_Bilirubin" name="Direct_Bilirubin" placeholder="e.g. 0.1" step="0.01" min="0" required />
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <span class="section-label">Enzyme Levels</span>
+        </div>
+
+        <div class="form-grid form-grid-3">
+          <div class="field">
+            <label for="Alkaline_Phosphotase">Alkaline Phosphatase <span class="unit">IU/L</span></label>
+            <input type="number" id="Alkaline_Phosphotase" name="Alkaline_Phosphotase" placeholder="e.g. 187" step="1" min="0" required />
+          </div>
+          <div class="field">
+            <label for="Alamine_Aminotransferase">ALT (SGPT) <span class="unit">IU/L</span></label>
+            <input type="number" id="Alamine_Aminotransferase" name="Alamine_Aminotransferase" placeholder="e.g. 16" step="1" min="0" required />
+          </div>
+          <div class="field">
+            <label for="Aspartate_Aminotransferase">AST (SGOT) <span class="unit">IU/L</span></label>
+            <input type="number" id="Aspartate_Aminotransferase" name="Aspartate_Aminotransferase" placeholder="e.g. 18" step="1" min="0" required />
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <span class="section-label">Protein Values</span>
+        </div>
+
+        <div class="form-grid form-grid-1">
+          <div class="field">
+            <label for="Total_Protiens">Total Proteins <span class="unit">g/dL</span></label>
+            <input type="number" id="Total_Protiens" name="Total_Protiens" placeholder="e.g. 6.8" step="0.1" min="0" required />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="reset" class="btn-reset">Clear</button>
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="btn-text">Predict</span>
+            <span class="btn-icon">→</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Result -->
+    {% if result is not none %}
+    <div class="result-card {% if result == 1 %}result-positive{% else %}result-negative{% endif %}">
+      <div class="result-header">
+        <span class="result-badge">PREDICTION RESULT</span>
+      </div>
+      <div class="result-body">
+        {% if result == 1 %}
+          <div class="result-icon-wrap positive">⚠</div>
+          <h2 class="result-title">Liver Disease <span>Detected</span></h2>
+          <p class="result-desc">
+            Based on the provided biochemical parameters, the model predicts that the patient is
+            positive for liver disease. Please consult a medical specialist immediately.
+          </p>
+        {% else %}
+          <div class="result-icon-wrap negative">✓</div>
+          <h2 class="result-title">No Liver Disease <span>Detected</span></h2>
+          <p class="result-desc">
+            Based on the provided parameters, the model does not detect signs of liver disease.
+            This is not a medical diagnosis — please continue regular check-ups.
+          </p>
+        {% endif %}
+      </div>
+      <div class="result-footer">
+        <span class="disclaimer">⚑ This system is an auxiliary prediction tool only and cannot be used as a medical decision.</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Error -->
+    {% if error %}
+    <div class="error-card">
+      <span class="error-icon">✕</span>
+      <div>
+        <strong>An Error Occurred</strong>
+        <p>{{ error }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span class="footer-sep">|</span>
+    <span>Liver Disease Predictor System</span>
+  </footer>
+
+  <script>
+    document.getElementById("predForm").addEventListener("submit", function () {
+      const btn = document.getElementById("submitBtn");
+      btn.classList.add("loading");
+      btn.querySelector(".btn-text").textContent = "Analyzing...";
+    });
+  </script>
+
+</body>
+</html>
