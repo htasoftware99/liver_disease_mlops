@@ -31,7 +31,6 @@ class DataProcessor:
 
         os.makedirs(self.processed_dir, exist_ok=True)
         
-        # --- EĞİTİM (TRAIN) SETİNDEN ÖĞRENİLECEK DEĞERLERİ TUTACAK SÖZLÜKLER ---
         self.impute_values = {}
         self.label_encoders = {}
         self.iqr_bounds = {}
@@ -40,19 +39,17 @@ class DataProcessor:
         logger.info("DataProcessor initialized (Data Leakage prevented structure).")
 
     # ------------------------------------------------------------------
-    # 1. PREPROCESS TRAIN (Öğren ve Uygula - Fit & Transform)
+    # 1. PREPROCESS TRAIN
     # ------------------------------------------------------------------
     def preprocess_train(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
             logger.info("Preprocessing TRAIN data (Fit & Transform)...")
 
-            # 1. Temizlik
             if "Unnamed: 0" in df.columns:
                 df.drop(columns=["Unnamed: 0"], inplace=True)
             df.drop_duplicates(inplace=True)
             df[self.target_col] = df[self.target_col].map({1: 1, 2: 0})
 
-            # 2. Eksik Veri (Train medyanlarını kaydet)
             for col in df.columns:
                 if df[col].isnull().sum() > 0:
                     median_val = df[col].median()
@@ -60,14 +57,12 @@ class DataProcessor:
                     df[col].fillna(median_val, inplace=True)
                     logger.info(f"Train - '{col}' filled with median: {median_val}")
 
-            # 3. Label Encoding (Encoder'ları kaydet)
             for col in self.cat_cols:
                 if col in df.columns:
                     le = LabelEncoder()
                     df[col] = le.fit_transform(df[col])
                     self.label_encoders[col] = le
 
-            # 4. Aykırı Değerler (IQR hesapla, sınırları kaydet ve Train'den sil)
             for col in self.num_cols:
                 if col in df.columns:
                     Q1  = df[col].quantile(0.25)
@@ -76,12 +71,10 @@ class DataProcessor:
                     lower = Q1 - self.iqr_mult * IQR
                     upper = Q3 + self.iqr_mult * IQR
                     
-                    self.iqr_bounds[col] = (lower, upper) # Sınırları test seti için sakla
+                    self.iqr_bounds[col] = (lower, upper) 
                     
-                    # Eğitim setinde aykırı değerleri siliyoruz
                     df = df[(df[col] >= lower) & (df[col] <= upper)]
 
-            # 5. Skewness (Hangi kolonların çarpık olduğunu tespit et ve kaydet)
             skewness = df[self.num_cols].apply(lambda x: x.skew())
             self.skewed_cols = skewness[skewness > self.skew_thresh].index.tolist()
             
@@ -96,39 +89,30 @@ class DataProcessor:
             raise CustomException("Train data preprocessing failed.", e)
 
     # ------------------------------------------------------------------
-    # 2. PREPROCESS TEST (Sadece Uygula - Transform)
+    # 2. PREPROCESS TEST
     # ------------------------------------------------------------------
     def preprocess_test(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
             logger.info("Preprocessing TEST data (Transform Only)...")
 
-            # 1. Temizlik
             if "Unnamed: 0" in df.columns:
                 df.drop(columns=["Unnamed: 0"], inplace=True)
             df[self.target_col] = df[self.target_col].map({1: 1, 2: 0})
-            # Not: Gerçek senaryoda test/canlı verisinden duplicate silinmez, olduğu gibi bırakılır.
 
-            # 2. Eksik Veri (Train setinden öğrenilen medyanlar ile doldur)
             for col, median_val in self.impute_values.items():
                 if col in df.columns:
                     df[col].fillna(median_val, inplace=True)
-            # Eğer eğitimde tam olup testte eksik gelen sürpriz bir değer varsa 0 ile doldur
             df.fillna(0, inplace=True)
 
-            # 3. Label Encoding (Train'de eğitilen encoder'ı uygula)
             for col, le in self.label_encoders.items():
                 if col in df.columns:
-                    # Eğitimde hiç görülmemiş bir kategori gelirse hata vermemesi için -1 atıyoruz.
                     classes_dict = {c: i for i, c in enumerate(le.classes_)}
                     df[col] = df[col].map(classes_dict).fillna(-1).astype(int)
 
-            # 4. Aykırı Değerler (Test setinden satır SİLİNMEYECEK, Capping/Baskılama yapılacak)
             for col, (lower, upper) in self.iqr_bounds.items():
                 if col in df.columns:
-                    # Alt sınırın altındakileri alt sınıra, üst sınırın üstündekileri üst sınıra eşitler.
                     df[col] = np.clip(df[col], lower, upper)
 
-            # 5. Skewness (Train setinde çarpık olduğu tespit edilen kolonlara log uygula)
             for col in self.skewed_cols:
                 if col in df.columns:
                     df[col] = np.log1p(df[col])
@@ -141,7 +125,7 @@ class DataProcessor:
             raise CustomException("Test data preprocessing failed.", e)
 
     # ------------------------------------------------------------------
-    # 3. BALANCE (SMOTE) - SADECE TRAIN İÇİN!
+    # 3. BALANCE (SMOTE)
     # ------------------------------------------------------------------
     def balance_data(self, df: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -192,7 +176,6 @@ class DataProcessor:
     # ------------------------------------------------------------------
     def save_data(self, df: pd.DataFrame, file_path: str) -> None:
         try:
-            # index=False önemli: fazladan Unnamed: 0 kolonu oluşmasını engeller
             df.to_csv(file_path, index=False)
             logger.info(f"Data saved → {file_path} (shape: {df.shape})")
         except Exception as e:
@@ -207,23 +190,18 @@ class DataProcessor:
             logger.info("=" * 50)
             logger.info("Data Processing pipeline initializing...")
 
-            # 1. Veriyi Yükle
             train_df = load_data(self.train_path)
             test_df  = load_data(self.test_path)
             logger.info(f"Initial Train shape: {train_df.shape} | Test shape: {test_df.shape}")
 
-            # 2. Preprocess: Train setini Fit et, Test setini Train'e göre Transform et
             train_df = self.preprocess_train(train_df)
             test_df  = self.preprocess_test(test_df)
 
-            # 3. SMOTE: (DİKKAT: Sadece Train setine uygulanır, asla Test setine uygulanmaz!)
             train_df = self.balance_data(train_df)
-            
-            # 4. Özellik Seçimi: Train üzerinde seç, Test setini bu kolonlara göre filtrele
+
             train_df, selected_features = self.select_features(train_df)
             test_df = test_df[selected_features + [self.target_col]]
-            
-            # 5. Kaydet
+
             self.save_data(train_df, PROCESSED_TRAIN_DATA_PATH)
             self.save_data(test_df,  PROCESSED_TEST_DATA_PATH)
 
