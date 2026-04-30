@@ -1,0 +1,15 @@
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+setuptools
+google-cloud-storage
+pyyaml
+dvc
+flask
+joblib
+xgboost
+imblearn
+tensorboard
+torch
