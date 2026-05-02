@@ -123,24 +123,17 @@ terraform plan
 terraform apply
 ```
 
-### Docker
-Build and push the image:
-```bash
-docker build -t gcr.io/<PROJECT_ID>/liver-disease-app:v1 .
-docker push gcr.io/<PROJECT_ID>/liver-disease-app:v1
-```
-
-### Kubernetes
+### Jenkins
 Deploy to GKE:
-```bash
-kubectl apply -f deployment.yml
-```
+Click build now on Jenkins pipeline
 
 ## 📈 Monitoring
 To view experiment logs in TensorBoard:
 ```bash
 tensorboard --logdir tensorboard_logs
 ```
-
-## 📝 License
-This project is licensed under the MIT License.
+### Terraform Destroy (IaC)
+Navigate to the `infrastructure/` directory to provision GCP resources:
+```bash
+terraform destroy
+```
