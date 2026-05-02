@@ -2,6 +2,12 @@
 
 This project implements an end-to-end MLOps pipeline for predicting liver disease based on patient records. It covers the entire machine learning lifecycle, from data ingestion and processing to model training, evaluation, and deployment on Google Kubernetes Engine (GKE).
 
+## 🏗️ System Architecture
+
+<p align="center">
+  <img src="structure.png" width="700"/>
+</p>
+
 ## 🚀 Project Overview
 
 The goal of this project is to build a robust and scalable system that can predict whether a patient has liver disease using biochemical markers. The project emphasizes MLOps principles, including data versioning, infrastructure as code (IaC), automated CI/CD pipelines, and experiment tracking.
